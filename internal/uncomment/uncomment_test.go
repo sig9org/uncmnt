@@ -40,7 +40,7 @@ func TestProcessFile(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := ProcessFile(&buf, path); err != nil {
+	if err := ProcessFile(&buf, path, DefaultRules()); err != nil {
 		t.Fatalf("ProcessFile: %v", err)
 	}
 
@@ -52,7 +52,7 @@ func TestProcessFile(t *testing.T) {
 
 func TestProcessFileMissing(t *testing.T) {
 	var buf bytes.Buffer
-	if err := ProcessFile(&buf, filepath.Join(t.TempDir(), "missing.txt")); err == nil {
+	if err := ProcessFile(&buf, filepath.Join(t.TempDir(), "missing.txt"), DefaultRules()); err == nil {
 		t.Fatal("expected error for missing file, got nil")
 	}
 }

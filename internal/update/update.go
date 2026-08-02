@@ -12,10 +12,15 @@ import (
 const repoSlug = "sig9org/uncmnt"
 
 // SelfUpdate replaces the running binary with the latest GitHub release,
-// unless currentVersion is already up to date.
-func SelfUpdate(currentVersion string) error {
+// unless currentVersion is already up to date. debugf, if non-nil, is called
+// with progress details for each step of the update.
+func SelfUpdate(currentVersion string, debugf func(format string, args ...any)) error {
+	if debugf == nil {
+		debugf = func(string, ...any) {}
+	}
 	ctx := context.Background()
 
+	debugf("checking latest release for %s", repoSlug)
 	latest, found, err := selfupdate.DetectLatest(ctx, selfupdate.ParseSlug(repoSlug))
 	if err != nil {
 		return fmt.Errorf("detect latest version: %w", err)
@@ -23,6 +28,7 @@ func SelfUpdate(currentVersion string) error {
 	if !found {
 		return errors.New("no release found for this platform")
 	}
+	debugf("latest release detected: %s", latest.Version())
 
 	if latest.LessOrEqual(currentVersion) {
 		fmt.Printf("current version (%s) is already the latest\n", currentVersion)
@@ -33,6 +39,7 @@ func SelfUpdate(currentVersion string) error {
 	if err != nil {
 		return fmt.Errorf("locate executable: %w", err)
 	}
+	debugf("replacing executable at %s", exe)
 
 	if err := selfupdate.UpdateTo(ctx, latest.AssetURL, latest.AssetName, exe); err != nil {
 		return fmt.Errorf("update binary: %w", err)
