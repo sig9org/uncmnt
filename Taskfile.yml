@@ -6,105 +6,68 @@ dotenv: ['project.ini']
 
 silent: true
 
-vars:
-  CLEANUP_DIRS:
-    - .idea
-    - .terraform
-    - .vscode
-  CLEANUP_FILES:
-    - .DS_Store
-    - .terraform.lock.hcl
-    - terraform.tfstate
-    - terraform.tfstate.backup
-    - Desktop.ini
-    - Thumbs.db
-  DIST_DIR: dist
-  PLATFORMS: >-
-    darwin/amd64 darwin/arm64
-    linux/386 linux/amd64 linux/arm64
-    windows/386 windows/amd64 windows/arm64
-  RELEASE_VERSION:
-    sh: git describe --tags --abbrev=0 2>/dev/null || echo v0.0.0
-  VERSION:
-    sh: git describe --tags --always 2>/dev/null || echo dev
+includes:
+  _cleanup: https://raw.githubusercontent.com/sig9org/tasks/main/tasks/_cleanup.yml
+  _go: https://raw.githubusercontent.com/sig9org/tasks/main/tasks/_go.yml
+  _time: https://raw.githubusercontent.com/sig9org/tasks/main/tasks/_time.yml
 
 tasks:
-  _time:end:
-    internal: true
-    platforms: [darwin, linux]
-    preconditions:
-      - sh: "python3 --version"
-      - sh: "test -f .task_start_time"
-    cmds:
-      - |
-        start=$(cat {{.TASKFILE_DIR}}/.task_start_time 2>/dev/null || echo 0)
-        end=$(python3 -c 'import time; print(int(time.time() * 1000))')
-        elapsed_ms=$((end - start))
-        python3 -c "g='\033[32m'; n='\033[0m'; p='======================================== '; ms=$elapsed_ms; s=ms//1000; r=ms%1000; print(f'{g}{p}Elapsed: {s} second{\"s\" if s!=1 else \"\"} {r} millisecond{\"s\" if r!=1 else \"\"}{n}') if s>0 else print(f'{g}{p}Elapsed: {r} millisecond{\"s\" if r!=1 else \"\"}{n}')"
-        rm -f {{.TASKFILE_DIR}}/.task_start_time
-
-  _time:start:
-    internal: true
-    platforms: [darwin, linux]
-    preconditions:
-      - sh: "python3 --version"
-    cmds:
-      - python3 -c 'import time; print(int(time.time() * 1000))' > {{.TASKFILE_DIR}}/.task_start_time
-
-  build:
-    aliases: [b]
-    deps: [_time:start]
-    desc: Build a binary for the current platform
-    cmds:
-      - go build -ldflags "-X {{.VERSION_PKG}}.Version={{.VERSION}}" -o {{.DIST_DIR}}/{{.BINARY_NAME}}{{if eq OS "windows"}}.exe{{end}} .
-      - defer: { task: _time:end }
-
-  build-all:
-    aliases: [ba]
-    deps: [_time:start]
-    desc: 'Cross-compile release binaries for all platforms'
-    cmds:
-      - mkdir -p {{.DIST_DIR}}
-      - |
-        set -e
-        for target in {{.PLATFORMS}}; do
-          goos="${target%/*}"
-          goarch="${target#*/}"
-          ext=""
-          if [ "$goos" = "windows" ]; then ext=".exe"; fi
-          out="{{.DIST_DIR}}/{{.BINARY_NAME}}_{{.RELEASE_VERSION}}_${goos}_${goarch}${ext}"
-          echo "building ${out}"
-          CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -ldflags "-X {{.VERSION_PKG}}.Version={{.RELEASE_VERSION}}" -o "$out" .
-        done
-      - defer: { task: _time:end }
-
-  cleanup:
-    aliases: [c]
-    deps: [_time:start]
-    desc: "Remove temporary and unnecessary files"
-    cmds:
-      - task: cleanup:internal
-      - defer: { task: _time:end }
-
-  cleanup:internal:
-    dir: "{{.USER_WORKING_DIR}}"
-    internal: true
-    platforms: [darwin, linux]
-    cmds:
-      - for: { var: CLEANUP_DIRS }
-        cmd: find . -type d -name "{{.ITEM}}" -print -prune -exec rm -rf {} +
-      - for: { var: CLEANUP_FILES }
-        cmd: find . -name "{{.ITEM}}" -print -delete
-
   default:
     cmds:
       - task --list
 
-  test:
-    aliases: [t]
+  cleanup:
+    aliases: [c]
+    deps: [_time:start]
+    desc: "Cleanup unnecessary files"
+    cmds:
+      - defer: { task: _time:end }
+      - task: _cleanup:start
+
+  go-all-build:
+    aliases: [ga]
+    deps: [_time:start]
+    desc: "Cross-compile release binaries for all platforms"
+    cmds:
+      - defer: { task: _time:end }
+      - task: _go:all-build
+
+  go-build:
+    aliases: [gb]
+    deps: [_time:start]
+    desc: "Build a binary for the current platform"
+    cmds:
+      - defer: { task: _time:end }
+      - task: _go:build
+
+  go-clean:
+    aliases: [gc]
+    deps: [_time:start]
+    desc: "Delete the contents of the distribution directory"
+    cmds:
+      - defer: { task: _time:end }
+      - task: _go:clean
+
+  go-register:
+    aliases: [gr]
+    deps: [_time:start]
+    desc: "Register the latest tagged version on pkg.go.dev"
+    cmds:
+      - defer: { task: _time:end }
+      - task: _go:register
+
+  go-test:
+    aliases: [gt]
     deps: [_time:start]
     desc: "Run the Go test suite"
     cmds:
-      - go vet ./...
-      - go test ./...
       - defer: { task: _time:end }
+      - task: _go:test
+
+  go-version:
+    aliases: [gv]
+    deps: [_time:start]
+    desc: "Show version information"
+    cmds:
+      - defer: { task: _time:end }
+      - task: _go:version

@@ -1,0 +1,14 @@
+# uncmnt config file.
+#
+# Place this file at ./config.yml (or config.yaml) in the directory you run
+# uncmnt from, or at ~/.config/uncmnt/config.yml (or config.yaml), to
+# override which leading characters mark a line as a comment. A config.yml
+# in the current directory takes precedence over one under
+# ~/.config/uncmnt/.
+#
+# When this file is found and comment_prefixes is non-empty, it replaces
+# uncmnt's built-in comment markers (!, #, ;) entirely for that run.
+comment_prefixes:
+  - "#"
+  - "//"
+  - "--"
