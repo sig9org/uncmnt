@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `uncmnt` is a small Go CLI that strips comment/blank lines from one or more
 text files and prints the result to stdout. Which lines count as comments
 can be overridden by a YAML config file. It self-updates from GitHub
-releases via `go-selfupdate`.
+releases via `selfupdate-go`, with SHA-256 verification from `checksums.txt`.
 
 ## Commands
 
@@ -27,7 +27,7 @@ not in this repo.
   platforms into `dist/`, named `{BINARY_NAME}_{RELEASE_VERSION}_{goos}_{goarch}`
   (`RELEASE_VERSION` is `git describe --tags --abbrev=0`, i.e. the current
   tag without a commit suffix). This naming must stay in sync with what
-  `go-selfupdate` expects to find on GitHub releases (see
+  `selfupdate-go` expects to find on GitHub releases (see
   `internal/update/update.go`).
 - `task go-clean` (alias `gc`) — empties `dist/`.
 - `task go-test` (alias `gt`) — runs `go vet ./...` then `go test ./...`.
@@ -81,12 +81,12 @@ There is no linter configured beyond `go vet` (run as part of `task go-test`).
   in the repo root is a git-ignored local scratch file for manual testing.
 - `internal/version/` — a single mutable `Version` var, overwritten at
   build time by ldflags (see Commands above). Defaults to `"dev"` in
-  unbuilt/`go run` contexts. `Commit()` reads the short VCS revision from
-  `runtime/debug.ReadBuildInfo()` (Go's automatic build stamping, not an
-  ldflag), and `Full()` combines the two for display in `-v`/`-h` output.
-- `internal/update/` — wraps `github.com/creativeprojects/go-selfupdate`
-  to let the binary replace itself from the `sig9org/uncmnt` GitHub repo's
-  releases. Version comparisons use the injected `version.Version`, so
+  unbuilt/`go run` contexts. `Full()` returns only that tag-based version for
+  display in `-v`/`-h` output; Git commit IDs are not displayed.
+- `internal/update/` — wraps `github.com/sig9org/selfupdate-go` to let the
+  binary replace itself from the `sig9org/uncmnt` GitHub repo's releases.
+  Every update must match the selected binary against the release's
+  `checksums.txt`. Version comparisons use the injected `version.Version`, so
   self-update correctness depends on binaries actually being built through
   `task go-build`/`task go-all-build` (not bare `go build`) so that var is
   populated with a real semver tag.
