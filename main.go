@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/sig9org/uncmnt/internal/config"
@@ -148,17 +149,30 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 func printHelp(w io.Writer) {
 	fmt.Fprintf(w, "%s %s\n", toolName, version.Full())
-	fmt.Fprintf(w, "Remove comment lines from text files and print the result to stdout.\n\n")
+	fmt.Fprintln(w, "Remove comment lines and print the result to stdout.")
 	fmt.Fprintf(w, "Usage:\n  %s [options] <file> [file...]\n\n", toolName)
 	fmt.Fprintln(w, "Options:")
-	fmt.Fprintln(w, "  -h, -help       Show this help message")
-	fmt.Fprintln(w, "  -v, -version    Show version information")
-	fmt.Fprintln(w, "  -update         Update uncmnt to the latest release")
-	fmt.Fprintln(w, "  -debug          Print detailed debug output to stdout")
-	fmt.Fprintln(w, "  -c, -config     Force uncmnt to use this config file path")
+	printHelpOption(w, "-c, -config <path>", "config file path", true)
+	printHelpOption(w, "-debug", "show debug output", false)
+	printHelpOption(w, "-h, -help", "show this help message", true)
+	printHelpOption(w, "-update", "update uncmnt", false)
+	printHelpOption(w, "-v, -version", "show version information", true)
 	fmt.Fprintln(w)
-	fmt.Fprintln(w, "Lines are dropped if they are blank, contain only whitespace, or start")
-	fmt.Fprintln(w, "with '!', '#', or ';' (leading whitespace ignored). This can be overridden")
-	fmt.Fprintln(w, "by a config.yml/config.yaml (see -c/-config, or README.md). Multiple")
-	fmt.Fprintln(w, "files are each processed and their results printed to stdout in order.")
+	fmt.Fprintln(w, "Blank lines and lines starting with !, #, or ; are dropped.")
+	fmt.Fprintln(w, "Use -c/-config to customize comment prefixes. Files are processed in order.")
+}
+
+func printHelpOption(w io.Writer, option, description string, hasShort bool) {
+	indent := "      "
+	if hasShort {
+		indent = "  "
+	}
+	line := indent + option
+	const descriptionColumn = 22
+	if len(line) < descriptionColumn {
+		line += strings.Repeat(" ", descriptionColumn-len(line))
+	} else {
+		line += "  "
+	}
+	fmt.Fprintln(w, line+description)
 }

@@ -28,6 +28,9 @@ func TestRunVersion(t *testing.T) {
 	if !strings.Contains(stdout.String(), toolName) {
 		t.Errorf("stdout missing tool name: %q", stdout.String())
 	}
+	if strings.Contains(stdout.String(), "(") {
+		t.Errorf("stdout must not include a git commit ID: %q", stdout.String())
+	}
 }
 
 func TestRunHelp(t *testing.T) {
@@ -38,6 +41,43 @@ func TestRunHelp(t *testing.T) {
 	}
 	if !strings.Contains(stdout.String(), "Usage:") {
 		t.Errorf("stdout missing usage text: %q", stdout.String())
+	}
+}
+
+func TestRunHelpOptionsAreAlphabeticalAndAligned(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"-help"}, &stdout, &stderr); code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+
+	help := stdout.String()
+	options := []string{
+		"  -c, -config <path>",
+		"      -debug",
+		"  -h, -help",
+		"      -update",
+		"  -v, -version",
+	}
+	previous := -1
+	for _, option := range options {
+		position := strings.Index(help, option)
+		if position <= previous {
+			t.Fatalf("option %q is out of order in help output", option)
+		}
+		previous = position
+	}
+
+	for _, description := range []string{
+		"config file path",
+		"show debug output",
+		"show this help message",
+		"update uncmnt",
+		"show version information",
+	} {
+		lineStart := strings.LastIndex(help[:strings.Index(help, description)], "\n") + 1
+		if got := strings.Index(help[lineStart:], description); got != 22 {
+			t.Errorf("description %q starts at column %d, want 22", description, got)
+		}
 	}
 }
 
